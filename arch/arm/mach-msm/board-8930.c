@@ -143,6 +143,10 @@
 #endif
 /*---------------------  Static Classes  ----------------------------*/
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <linux/memblock.h>
+#endif
+
 static struct platform_device msm_fm_platform_init = {
 	.name = "iris_fm",
 	.id   = -1,
@@ -976,10 +980,27 @@ static void __init msm8930_early_memory(void)
 	reserve_info = &msm8930_reserve_info;
 }
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+void __init taoshan_init_kexec(void)
+{
+	// Reserve space for hardboot page, just before the ram_console
+	struct membank* bank = &meminfo.bank[0];
+	phys_addr_t start = bank->start + bank->size - SZ_1M - SZ_1M;
+	int ret = memblock_remove(start, SZ_1M);
+	if(!ret)
+		pr_info("Hardboot page reserved at 0x%X\n", start);
+	else
+		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
+}
+#endif
+
 static void __init msm8930_reserve(void)
 {
 	msm_reserve();
 	taoshan_reserve();
+#ifdef CONFIG_KEXEC_HARDBOOT
+	taoshan_init_kexec();
+#endif
 }
 
 static void __init msm8930_allocate_memory_regions(void)
